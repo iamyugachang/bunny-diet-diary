@@ -244,7 +244,7 @@ textarea.ta{width:100%; border:1.5px solid var(--line); border-radius:12px; padd
         <button class="dangerbtn" data-a="reset">清除全部資料</button>
       </div>
       <input type="file" id="importInput" accept="application/json" class="hidden">
-      <div class="hintline">資料只存在這支手機的瀏覽器裡；換手機或清瀏覽器前，記得先匯出備份。</div>
+      <div class="hintline" id="backupHint">資料只存在這支手機的瀏覽器裡；換手機或清瀏覽器前，記得先匯出備份。</div>
     </div>
 
     <div class="card help">
@@ -864,7 +864,16 @@ function renderHistory(){
       '<span class="fgo" style="color:var(--purple)">›</span></button>';
   }).join('');
 }
+function updateBackupHint(){
+  var el = $('backupHint'); if(!el) return;
+  var base = '資料只存在這支手機的瀏覽器裡；換手機或清瀏覽器前，記得先匯出備份。';
+  if(state && state.lastExport){
+    var d = Math.floor((Date.now() - state.lastExport)/86400000);
+    el.textContent = '上次備份：' + (d<=0 ? '今天' : (d+' 天前')) + '。' + base;
+  } else { el.textContent = base; }
+}
 function renderSettings(){
+  updateBackupHint();
   var t = state.targets;
   var rows = CATS.map(function(c){
     return '<div class="fieldrow"><label>'+c.e+' '+c.n+'</label><input type="number" inputmode="decimal" step="0.5" min="0" id="tg-'+c.k+'" value="'+ (t[c.k]||0) +'"></div>';
@@ -893,6 +902,7 @@ function exportData(){
   a.href = URL.createObjectURL(blob);
   a.download = '兔兔飲食日記備份_'+d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+'.json';
   document.body.appendChild(a); a.click(); a.remove();
+  state.lastExport = Date.now(); saveState(); updateBackupHint();
   toast('已匯出備份檔案');
 }
 function importData(file){
@@ -1016,6 +1026,7 @@ document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeShee
 
 /* ==================== 啟動 ==================== */
 loadState();
+try { if (navigator.storage && navigator.storage.persist) { var pr = navigator.storage.persist(); if (pr && pr.catch) pr.catch(function(){}); } } catch(e){}
 renderAll();
 switchTab('today');
 </script>
