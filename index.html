@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#fff6fa">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -118,7 +118,7 @@ input,select,textarea{font-family:inherit; font-size:16px; color:var(--ink)}
 
 /* sheet & overlay */
 .overlay{position:fixed; inset:0; background:rgba(62,53,86,.35); z-index:60}
-.sheet{position:fixed; left:0; right:0; bottom:0; z-index:70; background:#fff; border-radius:22px 22px 0 0; max-height:86vh; overflow:auto; padding:16px 14px calc(18px + env(safe-area-inset-bottom)); transform:translateY(104%); transition:transform .25s ease}
+.sheet{position:fixed; left:0; right:0; bottom:0; z-index:70; background:#fff; border-radius:22px 22px 0 0; max-height:86vh; overflow:auto; overscroll-behavior:contain; padding:16px 14px calc(18px + env(safe-area-inset-bottom)); transform:translateY(104%); transition:transform .25s ease}
 .sheet.open{transform:translateY(0)}
 .sheet .grab{width:44px; height:5px; border-radius:999px; background:#eadef3; margin:0 auto 12px}
 .sheettitle{font-weight:700; font-size:16px; margin:0 0 10px; display:flex; align-items:center; justify-content:space-between}
@@ -503,8 +503,23 @@ function openSheet(html){
 }
 function closeSheet(){
   $('sheet').classList.remove('open');
+  $('sheet').style.bottom = '';
+  $('sheet').style.maxHeight = '';
   $('overlay').classList.add('hidden');
   sheetState = null;
+}
+function vvAdjust(){
+  var sh = $('sheet'); if(!sh) return;
+  var kb = 0;
+  if(window.visualViewport){
+    kb = Math.max(0, Math.round(window.innerHeight - window.visualViewport.height - window.visualViewport.offsetTop));
+  }
+  sh.style.bottom = kb > 40 ? (kb + 'px') : '';
+  sh.style.maxHeight = kb > 40 ? ('calc(100vh - ' + (kb + 12) + 'px)') : '';
+}
+if(window.visualViewport){
+  window.visualViewport.addEventListener('resize', vvAdjust);
+  window.visualViewport.addEventListener('scroll', vvAdjust);
 }
 function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function autoMeal(){
@@ -610,10 +625,12 @@ function openFoodSheet(presetCat, presetMeal){
   sheetState = { mode:'pick' };
   renderFoodSheet();
 }
-function renderFoodSheet(){
-  var catChips = '<div class="chips">' + CATS.map(function(c){
+function catChipsHTML(){
+  return '<div class="chips">' + CATS.map(function(c){
     return '<button class="chip '+(ui.cat===c.k?'on':'')+'" data-a="fcat" data-k="'+c.k+'">'+c.e+' '+c.n+'</button>';
   }).join('') + '</div>';
+}
+function foodListHTML(){
   var list = FOODS.filter(function(f){
     if(ui.cat && f.k !== ui.cat) return false;
     if(ui.q && f.n.indexOf(ui.q) < 0) return false;
@@ -626,18 +643,22 @@ function renderFoodSheet(){
       recent.slice(0,6).map(function(f){ return '<button class="chip" data-a="food" data-fid="'+f.id+'">'+esc(f.n)+'</button>'; }).join('') + '</div>';
   }
   var rows = list.map(function(f){
-    var s = foodStd(f);
     return '<button class="fitem" data-a="food" data-fid="'+f.id+'">'+
       '<span class="dot" style="background:'+CATMAP[f.k].c+'"></span>'+
       '<span class="fname">'+esc(f.n)+(f.a?' <span class="fsub">（約）</span>':'')+'<span class="fsub">'+(f.hint?('　'+f.hint):'')+'</span></span>'+
       '<span class="fsub">'+(f.u.indexOf('份')===0 ? ('每'+esc(f.u)) : ('1'+esc(f.u)+'＝'+fmt(f.per)+'份'))+'</span>'+
       '<span class="fgo">›</span></button>';
   }).join('');
+  return recentHTML + '<div class="flist">' + (rows || '<div class="emptyline">找不到，換個關鍵字試試</div>') + '</div>';
+}
+function refreshFoodList(){ var b = $('foodListBox'); if(b) b.innerHTML = foodListHTML(); }
+function refreshCatChips(){ var b = $('catChips'); if(b) b.innerHTML = catChipsHTML(); }
+function renderFoodSheet(){
   openSheet(
     '<div class="sheettitle">➕ 記錄食物<button data-a="close">✕</button></div>'+
-    '<div class="srch"><input id="foodQ" placeholder="搜尋食物（例如：白飯）" value="'+esc(ui.q)+'"></div>'+
-    catChips + recentHTML +
-    '<div class="flist">' + (rows || '<div class="emptyline">找不到，換個關鍵字試試</div>') + '</div>'+
+    '<div class="srch"><input id="foodQ" placeholder="搜尋食物（例如：白飯）" value="'+esc(ui.q)+'" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="search"></div>'+
+    '<div id="catChips">'+catChipsHTML()+'</div>'+
+    '<div id="foodListBox">'+foodListHTML()+'</div>'+
     '<div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap">'+
       '<button class="softbtn" data-a="custom">✏️ 自訂份數</button>'+
       '<button class="softbtn" data-a="paste">✨ 貼上兔兔估算</button>'+
@@ -645,12 +666,7 @@ function renderFoodSheet(){
   );
   var q = $('foodQ');
   if(q){
-    q.addEventListener('input', function(){
-      ui.q = q.value.trim();
-      var pos = q.selectionStart;
-      renderFoodSheet();
-      var q2 = $('foodQ'); q2.focus(); q2.setSelectionRange(pos,pos);
-    });
+    q.addEventListener('input', function(){ ui.q = q.value.trim(); refreshFoodList(); });
   }
 }
 function openQtySheet(fid){
@@ -688,7 +704,7 @@ function renderCustomSheet(){
   }).join('') + '</div>';
   openSheet(
     '<div class="sheettitle">✏️ 自訂份數<button data-a="close">✕</button></div>'+
-    '<div class="fieldrow"><label>名稱</label><input id="cxName" placeholder="例如：水餃 8 顆" value="'+esc(sheetState.name)+'"></div>'+
+    '<div class="fieldrow"><label>名稱</label><input id="cxName" placeholder="例如：水餃 8 顆" value="'+esc(sheetState.name)+'" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></div>'+
     chips+
     '<div class="qtybox"><button data-a="cxsub">−</button>'+
       '<div class="qtyval"><b>'+fmt(sheetState.qty)+'</b><span>份</span></div>'+
@@ -740,7 +756,7 @@ function renderImportSheet(val){
   openSheet(
     '<div class="sheettitle">✨ 貼上兔兔估算<button data-a="close">✕</button></div>'+
     '<div class="small" style="margin-bottom:8px">把兔兔回你的那一行貼進來，例如：全穀2、豆魚蛋肉2、蔬菜1、油脂1（沒吃的類別不用寫）</div>'+
-    '<textarea class="ta" id="impTa" placeholder="全穀2、豆魚蛋肉2、蔬菜1、油脂1">'+esc(val||'')+'</textarea>'+
+    '<textarea class="ta" id="impTa" autocapitalize="off" spellcheck="false" placeholder="全穀2、豆魚蛋肉2、蔬菜1、油脂1">'+esc(val||'')+'</textarea>'+
     '<div class="parsepreview" id="impPrev"></div>'+
     '<div style="text-align:center" class="small">加入：</div>'+
     mealsChips(sheetState.meal)+
@@ -965,7 +981,7 @@ document.addEventListener('click', function(ev){
     case 'del': deleteEntry(m, el.getAttribute('data-id')); break;
     case 'paste': openImportSheet(m); break;
     case 'close': closeSheet(); break;
-    case 'fcat': ui.cat = (ui.cat===k?null:k); renderFoodSheet(); break;
+    case 'fcat': ui.cat = (ui.cat===k?null:k); refreshCatChips(); refreshFoodList(); break;
     case 'food': openQtySheet(el.getAttribute('data-fid')); break;
     case 'back': renderFoodSheet(); break;
     case 'qsub': sheetState.qty = Math.max(0.5, sheetState.qty-0.5); renderQtySheet(); break;
