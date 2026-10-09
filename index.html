@@ -7,10 +7,10 @@
 <meta name="theme-color" content="#fff6fa">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="兔兔飲食">
+<meta name="apple-mobile-web-app-title" content="小兔健康 V2">
 <link rel="icon" href="icon.png" type="image/png">
 <link rel="apple-touch-icon" href="icon.png">
-<title>兔兔飲食日記</title>
+<title>小兔🐰的健康追蹤表｜版本2</title>
 <style>
 :root{
   --bg:#fff6fa; --card:#ffffff; --ink:#3e3556; --muted:#8b82a5; --line:#f2e8f4;
@@ -173,6 +173,7 @@ textarea.ta{width:100%; border:1.5px solid var(--line); border-radius:12px; padd
 .lightbox .lbrow{display:flex; gap:10px}
 .lightbox button{border:none; border-radius:12px; padding:11px 18px; font-size:14px}
 </style>
+<link rel="stylesheet" href="health-v2.css?v=2.0.0">
 </head>
 <body>
 <div class="wrap">
@@ -180,14 +181,17 @@ textarea.ta{width:100%; border:1.5px solid var(--line); border-radius:12px; padd
     <div class="brand">
       <span class="logo">🌙</span>
       <div>
-        <h1>兔兔飲食日記</h1>
+        <h1>小兔🐰的健康追蹤表</h1>
         <p id="subtitle">載入中…</p>
       </div>
     </div>
-    <span class="pill">🐰 ying</span>
+    <span class="pill">版本 2</span>
   </header>
 
-  <!-- ============ 今天 ============ -->
+  <div id="storageWarning" class="save-warning hidden" role="alert"></div>
+  <section id="view-health"><div id="healthWrap"></div></section>
+  <section id="view-month" class="hidden"><div id="monthWrap"></div></section>
+  <!-- ============ 飲食 ============ -->
   <section id="view-today">
     <div class="card datenav">
       <button id="prevDay" data-a="prevday" aria-label="前一天">‹</button>
@@ -229,6 +233,7 @@ textarea.ta{width:100%; border:1.5px solid var(--line); border-radius:12px; padd
 
   <!-- ============ 設定 ============ -->
   <section id="view-settings" class="hidden">
+    <div class="card"><div class="sectitle">🌱 健康目標</div><div id="healthTargetGrid"></div></div>
     <div class="card">
       <div class="sectitle">🎯 每日目標</div>
       <div class="tgrid" id="targetGrid"></div>
@@ -258,13 +263,14 @@ textarea.ta{width:100%; border:1.5px solid var(--line); border-radius:12px; padd
       </ul>
     </div>
 
-    <div class="foot">兔兔做給 ying 🐰🌙 v1.0</div>
+    <div class="foot">小兔🐰的健康追蹤表 · 版本2（v2.0.0）<br>記錄與估算供自我追蹤，非醫療診斷。</div>
   </section>
 </div>
 
 <nav class="tabbar">
-  <button data-a="tab" data-v="today" class="on"><b>🏠</b>今天</button>
-  <button data-a="tab" data-v="history"><b>📅</b>紀錄</button>
+  <button data-a="tab" data-v="health" class="on"><b>🐰</b>健康</button>
+  <button data-a="tab" data-v="today"><b>🍽️</b>飲食</button>
+  <button data-a="tab" data-v="month"><b>📖</b>月回顧</button>
   <button data-a="tab" data-v="settings"><b>⚙️</b>設定</button>
 </nav>
 
@@ -274,6 +280,7 @@ textarea.ta{width:100%; border:1.5px solid var(--line); border-radius:12px; padd
 <div id="toast" class="toast hidden"></div>
 <div id="lightbox" class="lightbox hidden"></div>
 
+<script src="health-core.js?v=2.0.0"></script>
 <script>
 'use strict';
 /* ==================== 基本資料 ==================== */
@@ -402,26 +409,27 @@ function dateLabel(ds){
   return {main:(+p[1])+'/'+(+p[2])+'（'+wk+'）', sub:head, date:d};
 }
 
+var storageReadFailed=false;
+function storageWarning(message){
+  var box=document.getElementById('storageWarning');
+  box.textContent=message || ''; box.classList.toggle('hidden',!message);
+}
 function loadState(){
+  var raw=null,old=null;
   try{
-    var raw = localStorage.getItem(KEY);
-    if(raw){ state = JSON.parse(raw); }
-  }catch(e){ state = null; }
-  if(!state){ state = {}; }
-  if(!state.targets) state.targets = JSON.parse(JSON.stringify(DEFAULT_TARGETS));
-  if(!state.days) state.days = {};
-  if(!state.photos) state.photos = {};
-  if(!state.recent) state.recent = [];
-  cleanupPhotos();
+    raw=localStorage.getItem(KEY);
+    if(raw){old=JSON.parse(raw);if(!HealthCore.validateBackup(old))throw new Error('invalid saved data');}
+  }catch(e){old=null;storageReadFailed=true;storageWarning('無法讀取既有資料，已暫停覆寫。請到設定匯入有效備份；不要清除網站資料。');}
+  if(raw && old && old.schemaVersion!==2){
+    try{if(!localStorage.getItem(KEY+'-before-version2'))localStorage.setItem(KEY+'-before-version2',raw);}
+    catch(e){storageWarning('原紀錄仍保留，但無法建立手機升級快照。請先到設定匯出備份。');}
+  }
+  state=HealthCore.normalize(old || {});
 }
 function saveState(){
-  try{
-    localStorage.setItem(KEY, JSON.stringify(state));
-  }catch(e){
-    prunePhotos(state.photos, 15);
-    try{ localStorage.setItem(KEY, JSON.stringify(state)); toast('照片較多，已自動保留最近的照片'); }
-    catch(e2){ toast('儲存空間不足，請先匯出備份再清除照片'); }
-  }
+  if(storageReadFailed){toast('既有資料讀取失敗，請先匯入有效備份');return false;}
+  try{localStorage.setItem(KEY,JSON.stringify(state));storageWarning('');return true;}
+  catch(e){storageWarning('⚠️ 尚未儲存成功：空間不足或瀏覽器限制。請先到設定匯出備份，再自行整理照片；App 不會自動刪照片。');toast('尚未儲存，請先匯出備份');return false;}
 }
 function cleanupPhotos(){
   /* 移除沒有被任何紀錄引用的照片 */
@@ -521,7 +529,7 @@ if(window.visualViewport){
   window.visualViewport.addEventListener('resize', vvAdjust);
   window.visualViewport.addEventListener('scroll', vvAdjust);
 }
-function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 function autoMeal(){
   var h = new Date().getHours();
   if(h < 10) return 'breakfast';
@@ -545,7 +553,7 @@ function renderToday(){
   var dl = dateLabel(curDate);
   $('dateLabel').innerHTML = '<span id="dateMain">'+dl.main+'</span><small>'+(dl.sub || '&nbsp;')+'</small>';
   $('nextDay').disabled = (curDate >= todayStr());
-  $('subtitle').textContent = '每日目標 '+t.kcal+' 大卡 ｜ 六大類追蹤';
+  $('subtitle').textContent = '健康小記 · 飲食 · 月末回顧';
 
   /* 熱量卡 */
   var remain = t.kcal - s.kcal;
@@ -617,6 +625,7 @@ function renderToday(){
       ph + hint +
       '</div>';
   }).join('');
+  if(window.HealthUI)HealthUI.renderDaily();
 }
 
 /* ==================== 食物選單（sheet） ==================== */
@@ -899,6 +908,7 @@ function renderSettings(){
   rows += '<div class="fieldrow"><label>蛋白質 g</label><input type="number" inputmode="decimal" step="1" min="0" id="tg-p" value="'+t.p+'"></div>';
   rows += '<div class="fieldrow"><label>脂質 g</label><input type="number" inputmode="decimal" step="1" min="0" id="tg-f" value="'+t.f+'"></div>';
   $('targetGrid').innerHTML = rows;
+  if(window.HealthUI)HealthUI.renderGoalSettings();
 }
 function saveTargets(){
   var t = state.targets;
@@ -912,13 +922,16 @@ function saveTargets(){
   toast('目標已更新 ✅');
 }
 function exportData(){
+  state.lastExport = Date.now();
   var blob = new Blob([JSON.stringify(state)], {type:'application/json'});
   var a = document.createElement('a');
   var d = new Date();
   a.href = URL.createObjectURL(blob);
-  a.download = '兔兔飲食日記備份_'+d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+'.json';
+  a.download = '小兔健康追蹤表_版本2_備份_'+d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+'.json';
+  var exportUrl=a.href;
   document.body.appendChild(a); a.click(); a.remove();
-  state.lastExport = Date.now(); saveState(); updateBackupHint();
+  setTimeout(function(){URL.revokeObjectURL(exportUrl);},30000);
+  saveState(); updateBackupHint();
   toast('已匯出備份檔案');
 }
 function importData(file){
@@ -926,13 +939,11 @@ function importData(file){
   rd.onload = function(){
     try{
       var obj = JSON.parse(rd.result);
-      if(!obj || !obj.targets || !obj.days) throw new Error('bad');
+      if(!HealthCore.validateBackup(obj)) throw new Error('bad');
       if(!confirm('匯入備份會覆蓋這支手機目前的資料，確定嗎？')) return;
-      state = obj;
-      if(!state.photos) state.photos = {};
-      if(!state.recent) state.recent = [];
-      saveState(); renderAll();
-      toast('備份已匯入 ✅');
+      state = HealthCore.normalize(obj);storageReadFailed=false;
+      HealthUI.invalidate();var stored=saveState();renderAll();
+      toast(stored?'備份已匯入 ✅':'備份已讀入，但尚未儲存成功，請先匯出保留');
     }catch(e){ toast('這個檔案看不懂，請確認是兔兔的備份檔'); }
   };
   rd.readAsText(file);
@@ -941,6 +952,7 @@ function resetAll(){
   if(!confirm('確定清除全部紀錄嗎？此動作無法復原。')) return;
   if(!confirm('真的要清除嗎？建議先匯出備份。')) return;
   state = null;
+  storageReadFailed=false;HealthUI.invalidate();
   localStorage.removeItem(KEY);
   loadState(); renderAll();
   toast('已清除全部資料');
@@ -950,10 +962,11 @@ function resetAll(){
 var curTab = 'today';
 function renderAll(){
   renderToday(); renderHistory(); renderSettings();
+  if(window.HealthUI){HealthUI.renderDaily();HealthUI.renderMonth();}
 }
 function switchTab(v){
   curTab = v;
-  ['today','history','settings'].forEach(function(x){
+  ['health','today','month','history','settings'].forEach(function(x){
     $('view-'+x).classList.toggle('hidden', x!==v);
   });
   document.querySelectorAll('.tabbar button').forEach(function(b){
@@ -962,6 +975,10 @@ function switchTab(v){
   if(v==='today') renderToday();
   if(v==='history') renderHistory();
   if(v==='settings') renderSettings();
+  if(v==='health')HealthUI.renderDaily();
+  if(v==='month')HealthUI.renderMonth();
+  $('fabAdd').classList.toggle('hidden',v!=='today');
+  window.scrollTo(0,0);
 }
 
 document.addEventListener('click', function(ev){
@@ -1040,11 +1057,14 @@ $('importInput').addEventListener('change', function(){
 });
 document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeSheet(); });
 
-/* ==================== 啟動 ==================== */
+/* ==================== 啟動（健康 UI 載入後） ==================== */
+</script>
+<script src="health-ui.js?v=2.0.0"></script>
+<script>
 loadState();
 try { if (navigator.storage && navigator.storage.persist) { var pr = navigator.storage.persist(); if (pr && pr.catch) pr.catch(function(){}); } } catch(e){}
 renderAll();
-switchTab('today');
+switchTab('health');
 </script>
 </body>
 </html>

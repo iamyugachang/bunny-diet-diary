@@ -1,0 +1,37 @@
+/* Version 2: soft notebook palette, stable phone forms, one-tap cup row. */
+:root{--muted:#756b88;--blue:#3e87a6;--line:#eee4f2}
+html{overflow-x:hidden}body{overflow-wrap:break-word}
+.brand{min-width:0}.brand h1{font-size:18px;letter-spacing:0}.logo{font-size:27px}.pill{padding:5px 8px}
+.brand p{font-size:12px}.wrap{padding-bottom:100px}
+.health-note{color:var(--muted);font-size:13px;margin:0 0 12px}
+.health-date{display:flex;align-items:center;gap:8px;justify-content:space-between}
+.health-date button{min-width:42px;min-height:44px;border:0;border-radius:12px;background:#f6ecfb;color:var(--purple-d);font-size:22px}
+.health-date input{width:100%;min-width:0;text-align:center;border:0;background:transparent;font-size:16px;font-weight:600;padding:10px 0}
+.health-date label{flex:1;min-width:0}.health-date small{display:block;text-align:center;font-size:12px;color:var(--muted)}
+.health-title{display:flex;align-items:baseline;justify-content:space-between;gap:6px;margin-bottom:10px;font-weight:650;font-size:16px}.health-title small{font-size:12px;font-weight:400;color:var(--muted)}
+.health-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.health-field{display:flex;flex-direction:column;gap:5px;min-width:0;font-size:14px}.health-field label{color:var(--ink)}
+.health-field input,.health-field textarea,.month-picker{width:100%;min-width:0;border:1.5px solid #e5d9ec;border-radius:12px;background:#fdfbff;padding:11px 10px;font-size:16px;line-height:1.4;scroll-margin-block:100px}
+.health-field input[type=time]{min-height:46px;padding:10px 6px}.health-field input[type=checkbox]{width:20px;height:20px;min-width:20px}
+.health-field textarea{resize:vertical;min-height:82px}.health-field.wide{grid-column:1/-1}.field-error{font-size:12px;color:#a12e46;min-height:0}.field-error:empty{display:none}
+.health-field input[aria-invalid=true]{border-color:#b54053}
+.health-pill{font-size:13px;background:#f7f2fa;border-radius:11px;padding:8px 10px;margin-top:10px;color:#625074;line-height:1.6}
+.cup-row{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px;margin:10px 0}
+.cup{border:1.5px solid #d5e5ec;background:#f7fbfd;border-radius:14px;min-height:64px;padding:6px 0;color:#63737d;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:12px}
+.cup .cup-icon{font-size:28px;line-height:1.2;opacity:.4}.cup.on{background:#dff1fa;border-color:#5d9fbd;color:#235f7b}.cup.on .cup-icon{opacity:1}
+.health-line{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}.health-line strong{font-size:17px}.health-hint{font-size:12px;color:var(--muted);line-height:1.6;margin-top:6px}
+.quick-row{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0 0}.health-chip{border:1.5px solid #e7dcec;background:#fff;border-radius:999px;min-height:40px;font-size:13px;padding:7px 11px;color:var(--ink)}
+.health-chip.on{border-color:var(--purple-d);background:#f1eafa;color:#594087;font-weight:600}
+.lights{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.lights button{border:1.5px solid var(--line);background:#fff;border-radius:12px;min-height:48px;font-size:14px;padding:8px 2px}.lights button.on{border-color:var(--purple-d);background:#f5edfc;font-weight:600}
+.health-link{border:0;background:#f6ecfb;color:#625087;border-radius:14px;width:100%;padding:12px;text-align:left;display:flex;justify-content:space-between;gap:8px;align-items:center}.health-link b{display:block;font-size:15px}.health-link small{font-size:12px;line-height:1.6;display:block;color:#75658a}
+.save-line{text-align:center;font-size:12px;color:#665775;margin:10px 0}.save-line.error{color:#a12e46}.save-warning{background:#fff2d7;border:1px solid #e0ba72;padding:12px;border-radius:12px;font-size:14px;margin:0 0 12px;position:relative;z-index:2}
+.month-heading{font-size:18px;font-weight:700;margin:4px 0 10px}.month-picker{max-width:210px}.stat-box{background:#faf5fd;border-radius:12px;padding:10px;min-width:0}.stat-box b{display:block;font-size:22px;font-weight:650}.stat-box span{font-size:12px;color:var(--muted)}
+.month-metric{border-top:1px dashed var(--line);padding:11px 0}.month-metric:first-child{border:0;padding-top:0}.month-metric .topline{display:flex;justify-content:space-between;gap:10px;font-size:14px}.month-metric .topline strong{color:#60498b}.month-metric p{margin:5px 0 0;font-size:12px;color:var(--muted)}
+.week-item{font-size:13px;padding:8px 0;border-top:1px dashed var(--line);display:flex;justify-content:space-between;gap:10px}.week-item small{display:block;color:var(--muted);font-size:11px}
+.trend{width:100%;height:auto;display:block;margin:8px 0}.trend text{font:12px -apple-system,BlinkMacSystemFont,system-ui,sans-serif;fill:#655970}.trend circle{fill:var(--purple-d);stroke:white;stroke-width:1.5}.measure-list{padding-left:20px;font-size:13px;line-height:1.8;color:var(--muted)}
+.reward-check{display:flex;align-items:center;gap:9px;font-size:14px;margin-top:12px}.reward-check input{width:20px;height:20px;accent-color:var(--purple-d)}
+button:focus-visible,input:focus-visible,textarea:focus-visible,summary:focus-visible{outline:3px solid #a384c5;outline-offset:2px}button:disabled{opacity:.4;cursor:default}
+body.typing .tabbar{visibility:hidden}body.typing .fab{display:none}
+#histList .hrow{flex-wrap:wrap}#histList .hc{white-space:normal}
+@media(max-width:350px){.brand h1{font-size:16px}.brand{gap:6px}.logo{font-size:24px}.card{padding:12px}.health-grid{gap:9px}.cup-row{gap:5px}.pill{font-size:11px}.fieldrow label{width:74px}.tgrid{grid-template-columns:1fr}.week-item{flex-wrap:wrap}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
